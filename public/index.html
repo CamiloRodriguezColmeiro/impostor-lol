@@ -61,13 +61,17 @@
     });
 
     socket.on("yourRole", (data) => {
-      document.getElementById("result").innerText =
-        `Te tocó ${data.champion} ${data.impostor ? "🔥 (IMPOSTOR)" : ""}`;
+      if (data.impostor) {
+        document.getElementById("result").innerText = "🔥 Sos el IMPOSTOR (no tenés campeón)";
+      } else {
+        document.getElementById("result").innerText = `Te tocó ${data.champion}`;
+      }
     });
 
-    socket.on("gameStarted", () => {
-      console.log("Juego iniciado!");
+    socket.on("gameStarted", ({ total }) => {
+      console.log(`Juego iniciado con ${total} jugadores!`);
     });
   </script>
 </body>
+</html>
 </html>
