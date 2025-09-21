@@ -23,12 +23,14 @@ function shuffle(arr) {
 io.on("connection", (socket) => {
   console.log("Jugador conectado:", socket.id);
 
+  // Crear sala
   socket.on("createRoom", (cb) => {
-    const roomId = uuidv4().slice(0, 6).toUpperCase(); // código corto tipo ABC123
+    const roomId = uuidv4().slice(0, 6).toUpperCase(); // código tipo ABC123
     rooms[roomId] = { players: [], assignments: [] };
     cb(roomId);
   });
 
+  // Unirse a sala
   socket.on("joinRoom", ({ roomId, playerName }, cb) => {
     const room = rooms[roomId];
     if (!room) return cb({ error: "❌ Sala no existe" });
@@ -40,6 +42,7 @@ io.on("connection", (socket) => {
     cb({ success: true });
   });
 
+  // Iniciar juego
   socket.on("startGame", ({ roomId, champions }) => {
     const room = rooms[roomId];
     if (!room) return;
@@ -60,16 +63,20 @@ io.on("connection", (socket) => {
 
     // Mandar rol privado a cada jugador
     room.assignments.forEach((a) => {
-      io.to(a.id).emit("yourRole", {
-        champion: a.champion,
-        impostor: a.impostor,
-      });
+      if (a.impostor) {
+        io.to(a.id).emit("yourRole", { impostor: true });
+      } else {
+        io.to(a.id).emit("yourRole", {
+          champion: a.champion,
+          impostor: false,
+        });
+      }
     });
 
-    // Avisar que el juego empezó
     io.to(roomId).emit("gameStarted");
   });
 
+  // Manejar desconexiones
   socket.on("disconnect", () => {
     for (const [roomId, room] of Object.entries(rooms)) {
       room.players = room.players.filter((p) => p.id !== socket.id);
