@@ -7,7 +7,6 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: "*" } });
 
-// Servir los archivos estáticos (public/index.html)
 app.use(express.static("public"));
 
 const rooms = {}; // { roomId: { players: [], assignments: [] } }
@@ -25,7 +24,7 @@ io.on("connection", (socket) => {
 
   // Crear sala
   socket.on("createRoom", (cb) => {
-    const roomId = uuidv4().slice(0, 6).toUpperCase(); // código tipo ABC123
+    const roomId = uuidv4().slice(0, 6).toUpperCase();
     rooms[roomId] = { players: [], assignments: [] };
     cb(roomId);
   });
@@ -50,14 +49,17 @@ io.on("connection", (socket) => {
     let players = shuffle([...room.players]);
     let champs = shuffle([...champions]);
 
-    // Asignar campeones
-    room.assignments = players.map((p, i) => ({
+    // Elegir 1 campeón que será el mismo para todos los no impostores
+    const chosenChampion = champs[0];
+
+    // Asignar roles
+    room.assignments = players.map((p) => ({
       ...p,
-      champion: champs[i % champs.length],
+      champion: chosenChampion,
       impostor: false,
     }));
 
-    // Elegir impostor al azar (mínimo 1 asegurado)
+    // Elegir impostor
     const impostorIndex = Math.floor(Math.random() * room.assignments.length);
     room.assignments[impostorIndex].impostor = true;
 
@@ -67,16 +69,16 @@ io.on("connection", (socket) => {
         io.to(a.id).emit("yourRole", { impostor: true });
       } else {
         io.to(a.id).emit("yourRole", {
-          champion: a.champion,
+          champion: chosenChampion,
           impostor: false,
         });
       }
     });
 
-    io.to(roomId).emit("gameStarted");
+    io.to(roomId).emit("gameStarted", { total: players.length });
   });
 
-  // Manejar desconexiones
+  // Desconexiones
   socket.on("disconnect", () => {
     for (const [roomId, room] of Object.entries(rooms)) {
       room.players = room.players.filter((p) => p.id !== socket.id);
