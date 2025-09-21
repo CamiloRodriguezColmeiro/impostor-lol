@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Impostor LoL</title>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>🎭 Juego Impostor LoL</h1>
+
+  <button id="createRoom">Crear Sala</button>
+  <br><br>
+
+  <input id="room" placeholder="ID Sala">
+  <input id="name" placeholder="Tu nombre">
+  <button id="joinRoom">Unirse</button>
+
+  <h3>Jugadores en sala:</h3>
+  <ul id="players"></ul>
+
+  <h3>Acciones del host:</h3>
+  <input id="champs" placeholder="Campeones (ej: Yasuo,Lux,Ahri)">
+  <button id="startGame">Iniciar Juego</button>
+
+  <h2 id="result"></h2>
+
+  <script>
+    const socket = io();
+
+    document.getElementById("createRoom").onclick = () => {
+      socket.emit("createRoom", (roomId) => {
+        alert("Sala creada! ID: " + roomId);
+        document.getElementById("room").value = roomId;
+      });
+    };
+
+    document.getElementById("joinRoom").onclick = () => {
+      const room = document.getElementById("room").value;
+      const name = document.getElementById("name").value;
+
+      socket.emit("joinRoom", { roomId: room, playerName: name }, (res) => {
+        if (res.error) alert(res.error);
+        else alert("Te uniste a la sala!");
+      });
+    };
+
+    document.getElementById("startGame").onclick = () => {
+      const room = document.getElementById("room").value;
+      const champs = document.getElementById("champs").value.split(",").map(c => c.trim()).filter(Boolean);
+      socket.emit("startGame", { roomId: room, champions: champs });
+    };
+
+    socket.on("updatePlayers", (players) => {
+      const list = document.getElementById("players");
+      list.innerHTML = "";
+      players.forEach(p => {
+        const li = document.createElement("li");
+        li.textContent = p;
+        list.appendChild(li);
+      });
+    });
+
+    socket.on("yourRole", (data) => {
+      document.getElementById("result").innerText =
+        `Te tocó ${data.champion} ${data.impostor ? "🔥 (IMPOSTOR)" : ""}`;
+    });
+
+    socket.on("gameStarted", () => {
+      console.log("Juego iniciado!");
+    });
+  </script>
+</body>
+</html>
